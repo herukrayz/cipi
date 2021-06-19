@@ -5,6 +5,7 @@
 #################################################### CONFIGURATION ###
 BUILD=202104281
 PASS=$(openssl rand -base64 32|sha256sum|base64|head -c 32| tr '[:upper:]' '[:lower:]')
+ADMPASS=$(openssl rand -base64 32|sha256sum|base64|head -c 32| tr '[:upper:]' '[:lower:]')
 DBPASS=$(openssl rand -base64 24|sha256sum|base64|head -c 32| tr '[:upper:]' '[:lower:]')
 SERVERID=$(openssl rand -base64 12|sha256sum|base64|head -c 32| tr '[:upper:]' '[:lower:]')
 IP=$(curl -s https://checkip.amazonaws.com)
@@ -135,8 +136,9 @@ sudo cat > "$WELCOME" <<EOF
 ██      ██ ██████  ██ 
 ██      ██ ██      ██
  ██████ ██ ██      ██
-
-With great power comes great responsibility...
+ 
+To manage your server visit: http://$IP
+Default credentials are: administrator / $ADMPASS
 
 EOF
 
@@ -178,25 +180,6 @@ sudo mkdir /etc/cipi/
 sudo chmod o-r /etc/cipi
 sudo mkdir /var/cipi/
 sudo chmod o-r /var/cipi
-
-
-
-# USER
-clear
-echo "${bggreen}${black}${bold}"
-echo "Cipi root user..."
-echo "${reset}"
-sleep 1s
-
-sudo pam-auth-update --package
-sudo mount -o remount,rw /
-sudo chmod 640 /etc/shadow
-sudo useradd -m -s /bin/bash cipi
-echo "cipi:$PASS"|sudo chpasswd
-sudo usermod -aG sudo cipi
-
-
-
 
 # NGINX
 clear
@@ -458,33 +441,17 @@ sudo systemctl restart nginx.service
 # MYSQL
 clear
 echo "${bggreen}${black}${bold}"
-echo "MySQL setup..."
+echo "MariaDB setup..."
 echo "${reset}"
 sleep 1s
 
 
-sudo apt-get install -y mysql-server
-SECURE_MYSQL=$(expect -c "
-set timeout 10
-spawn mysql_secure_installation
-expect \"Press y|Y for Yes, any other key for No:\"
-send \"n\r\"
-expect \"New password:\"
-send \"$DBPASS\r\"
-expect \"Re-enter new password:\"
-send \"$DBPASS\r\"
-expect \"Remove anonymous users? (Press y|Y for Yes, any other key for No)\"
-send \"y\r\"
-expect \"Disallow root login remotely? (Press y|Y for Yes, any other key for No)\"
-send \"n\r\"
-expect \"Remove test database and access to it? (Press y|Y for Yes, any other key for No)\"
-send \"y\r\"
-expect \"Reload privilege tables now? (Press y|Y for Yes, any other key for No) \"
-send \"y\r\"
-expect eof
-")
-echo "$SECURE_MYSQL"
-/usr/bin/mysql -u root -p$DBPASS <<EOF
+sudo apt-get install -y mariadb-server
+mysql -e "DROP USER ''@'localhost'"
+mysql -e "DROP USER ''@'$(hostname)'"
+mysql -e "DROP DATABASE test"
+mysql -e "FLUSH PRIVILEGES"
+/usr/bin/mysql -u root <<EOF
 use mysql;
 CREATE USER 'cipi'@'%' IDENTIFIED WITH mysql_native_password BY '$DBPASS';
 GRANT ALL PRIVILEGES ON *.* TO 'cipi'@'%' WITH GRANT OPTION;
@@ -569,6 +536,7 @@ sudo rpl -i -w "CIPISERVERID" $SERVERID /var/www/html/database/seeders/DatabaseS
 sudo rpl -i -w "CIPIIP" $IP /var/www/html/database/seeders/DatabaseSeeder.php
 sudo rpl -i -w "CIPIPASS" $PASS /var/www/html/database/seeders/DatabaseSeeder.php
 sudo rpl -i -w "CIPIDB" $DBPASS /var/www/html/database/seeders/DatabaseSeeder.php
+sudo rpl -i -w "ADMPASS" $ADMPASS /var/www/html/database/seeders/DatabaseSeeder.php
 sudo chmod -R o+w /var/www/html/storage
 sudo chmod -R 777 /var/www/html/storage
 sudo chmod -R o+w /var/www/html/bootstrap/cache
@@ -625,10 +593,6 @@ cat > "$TASK" <<EOF
 EOF
 crontab $TASK
 sudo systemctl restart nginx.service
-sudo rpl -i -w "#PasswordAuthentication" "PasswordAuthentication" /etc/ssh/sshd_config
-sudo rpl -i -w "# PasswordAuthentication" "PasswordAuthentication" /etc/ssh/sshd_config
-sudo rpl -i -w "PasswordAuthentication no" "PasswordAuthentication yes" /etc/ssh/sshd_config
-sudo rpl -i -w "PermitRootLogin yes" "PermitRootLogin no" /etc/ssh/sshd_config
 sudo service sshd restart
 TASK=/etc/supervisor/conf.d/cipi.conf
 touch $TASK
@@ -667,13 +631,9 @@ echo "***********************************************************"
 echo "                    SETUP COMPLETE"
 echo "***********************************************************"
 echo ""
-echo " SSH root user: cipi"
-echo " SSH root pass: $PASS"
-echo " MySQL root user: cipi"
-echo " MySQL root pass: $DBPASS"
 echo ""
 echo " To manage your server visit: http://$IP"
-echo " Default credentials are: administrator / 12345678"
+echo " Default credentials are: administrator / $ADMPASS"
 echo ""
 echo "***********************************************************"
 echo "          DO NOT LOSE AND KEEP SAFE THIS DATA"

@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
 
         Auth::create([
             'username' => config('cipi.username'),
-            'password' => Hash::make(config('cipi.password')),
+            'password' => Hash::make('ADMPASS'),
             'apikey' => Str::random(48)
         ]);
 

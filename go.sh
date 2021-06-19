@@ -143,20 +143,6 @@ Default credentials are: administrator / $ADMPASS
 EOF
 
 
-
-# SWAP
-clear
-echo "${bggreen}${black}${bold}"
-echo "Memory SWAP..."
-echo "${reset}"
-sleep 1s
-
-sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
-sudo /sbin/mkswap /var/swap.1
-sudo /sbin/swapon /var/swap.1
-
-
-
 # ALIAS
 clear
 echo "${bggreen}${black}${bold}"

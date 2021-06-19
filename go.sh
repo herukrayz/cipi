@@ -440,7 +440,7 @@ mysql -e "DROP DATABASE test"
 mysql -e "FLUSH PRIVILEGES"
 /usr/bin/mysql -u root <<EOF
 use mysql;
-CREATE USER 'cipi'@'%' IDENTIFIED WITH mysql_native_password BY '$DBPASS';
+CREATE USER 'cipi'@'%' IDENTIFIED BY '$DBPASS';
 GRANT ALL PRIVILEGES ON *.* TO 'cipi'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
@@ -479,13 +479,13 @@ echo "${reset}"
 sleep 1s
 
 curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | sudo apt-key add -
-curl -sL https://deb.nodesource.com/setup_15.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
 NODE=/etc/apt/sources.list.d/nodesource.list
 sudo unlink NODE
 sudo touch $NODE
 sudo cat > "$NODE" <<EOF
-deb https://deb.nodesource.com/node_15.x focal main
-deb-src https://deb.nodesource.com/node_15.x focal main
+deb https://deb.nodesource.com/node_16.x focal main
+deb-src https://deb.nodesource.com/node_16.x focal main
 EOF
 sudo apt-get update
 sudo apt -y install nodejs
@@ -591,7 +591,7 @@ autostart=true
 autorestart=true
 stopasgroup=true
 killasgroup=true
-user=cipi
+user=www-data
 numprocs=8
 redirect_stderr=true
 stdout_logfile=/var/www/worker.log
